@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPIE - Single Post Instagram Explorer</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23E4405F'%3E%3Cpath d='M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z'/%3E%3C/svg%3E">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- SQL.js for SQLite database reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <!-- Proper ZIP-GO Implementation for Large Batches -->
+    <script type="importmap">
+    {
+        "imports": {
+            "fflate": "https://unpkg.com/fflate@0.8.2/esm/browser.js"
+        }
+    }
+    </script>
+    
+    <!-- App Styles -->
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/video-player.css">
+    <link rel="stylesheet" href="css/directory-modal.css">
+    
+    <!-- Embedded Comments Data -->
+    <script src="comments-data.js"></script>
+    
+    <!-- Early Loading Progress Script -->
+    <script>
+        // Update loading progress immediately when page starts
+        function updateEarlyProgress(message, percentage) {
+            const loadingStatus = document.getElementById('loadingStatus');
+            const loadingProgress = document.getElementById('loadingProgress');
+            
+            if (loadingStatus) loadingStatus.textContent = message;
+            if (loadingProgress) {
+                loadingProgress.style.width = percentage + '%';
+                loadingProgress.setAttribute('aria-valuenow', percentage);
+            }
+        }
+        
+        // Show initial progress as soon as DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            updateEarlyProgress('DOM loaded, starting application...', 5);
+        });
+    </script>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="appLoadingOverlay" class="app-loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner">
+                <div class="loader"></div>
+            </div>
+            <h3 class="loading-title">SPIE</h3>
+            <p class="loading-subtitle">Single Post Instagram Explorer</p>
+            <p id="appLoadingStatus" class="loading-status">Initializing...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="titlebar">
+        <div class="titlebar-content">
+            <div class="titlebar-left">
+                <a href="#" id="home-globe" style="display: none; cursor: pointer; text-decoration: none; margin-right: 12px;" title="Return to Welcome Screen" onclick="goToWelcomeScreen(event)">
+                    <i class="fas fa-house" style="color: white; font-size: 1.2rem;"></i>
+                </a>
+                <div id="homeButton" style="display: flex; align-items: center; cursor: pointer;" onclick="goToMainView()">
+                    <i class="fab fa-instagram" style="background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 2rem; margin-right: 12px;"></i>
+                    <h1>SPIE - Single Post Instagram Explorer</h1>
+                </div>
+            </div>
+            <div class="titlebar-center" id="channel-navigation" style="display: none;">
+                <!-- Search and filters hidden for single post view -->
+            </div>
+            <button class="help-button" id="about-btn" data-bs-toggle="modal" data-bs-target="#aboutModal" title="About">
+                <i class="fas fa-question"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Status Indicator -->
+    <div id="filterStatus" class="filter-status">
+        <span id="filterText">No filter active</span>
+        <button class="clear-filter" onclick="window.archiveExplorer?.clearAnalyticsFilter()">Clear</button>
+    </div>
+
+    <!-- App Drawer Sidebar -->
+    <div class="app-drawer" id="appDrawer">
+        <button class="app-drawer-toggle" id="drawerToggle">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+        <div class="app-drawer-content">
+            <div class="app-drawer-apps">
+                <a href="../../../index.html" class="app-drawer-icon" title="YouTube Explorer" onclick="sessionStorage.setItem('bypassWelcome', 'true')">
+                    <i class="bi bi-youtube" style="color: #ff0000;"></i>
+                </a>
+                <a href="#" class="app-drawer-icon active" onclick="goToMainView()" title="Instagram Explorer">
+                    <i class="fab fa-instagram" style="background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
+                </a>
+                <a href="../../MMFacebookExplorer/index.html" class="app-drawer-icon" title="Facebook Explorer">
+                    <i class="bi bi-facebook" style="color: #1877F2;"></i>
+                </a>
+            </div>
+            <div class="app-drawer-footer">
+                <button class="logout-icon" onclick="logoutUser()" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen - Shows immediately -->
+    <div id="loadingScreen" class="loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+        <div class="loading-content" style="text-align: center;">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 4rem; height: 4rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h3 style="color: #333; margin-bottom: 10px;">Loading SPIE...</h3>
+            <p id="loadingStatus" style="color: #666; margin-bottom: 15px;">Initializing Single Post Instagram Explorer...</p>
+            <div class="progress mt-3" style="width: 400px; height: 10px; margin: 0 auto;">
+                <div id="loadingProgress" class="progress-bar bg-primary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <small class="text-muted mt-2 d-block" style="margin-top: 10px;">
+                Loading urine therapy post and comments...
+            </small>
+        </div>
+    </div>
+
+    <!-- Welcome & Upload Modal -->
+    <div id="directorySelectionModal" class="directory-modal" style="display: flex; pointer-events: auto;">
+        <canvas id="welcomeNetworkCanvas" class="network-canvas"></canvas>
+        <div class="gradient-background">
+            <div class="sphere-1 gradient-sphere"></div>
+            <div class="sphere-2 gradient-sphere"></div>
+            <div class="sphere-3 gradient-sphere"></div>
+            <div class="glow"></div>
+            <div class="noise-overlay"></div>
+            <div class="grid-overlay"></div>
+        </div>
+        <div class="directory-modal-content">
+            <div class="directory-modal-header">
+                <div class="welcome-logo">
+                    <i class="fab fa-instagram" style="font-size: 4rem; background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent;"></i>
+                </div>
+                <h3 class="mt-3 mb-2">Welcome to SPIE</h3>
+                <p class="text-muted">Single Post Instagram Explorer</p>
+            </div>
+            
+            <div class="directory-modal-body">
+                <!-- Upload Form -->
+                <div id="uploadForm" class="upload-form">
+                    <div class="upload-table">
+                        <!-- Row 1: Author Avatar Upload -->
+                        <div class="upload-table-row">
+                            <div class="upload-label-cell">
+                                <label class="upload-label">
+                                    <i class="fas fa-user-circle"></i>
+                                    Author Avatar
+                                </label>
+                            </div>
+                            <div class="upload-input-cell">
+                                <div class="upload-area" id="avatarUpload" ondrop="handleFileDrop(event, 'avatar')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                                    <input type="file" id="avatarInput" accept=".png,.jpg,.jpeg" style="display: none;" onchange="handleFileSelect(event, 'avatar')">
+                                    <div class="upload-content">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <span class="upload-text">PNG/JPG</span>
+                                        <small class="text-muted">Max 10MB</small>
+                                    </div>
+                                    <div class="upload-preview" style="display: none;">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        <span id="avatarFileName" class="file-name"></span>
+                                        <button type="button" class="remove-file" onclick="removeFile('avatar')">×</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Username Input -->
+                        <div class="upload-table-row">
+                            <div class="upload-label-cell">
+                                <label class="upload-label">
+                                    <i class="fas fa-at"></i>
+                                    Username
+                                </label>
+                            </div>
+                            <div class="upload-input-cell">
+                                <div class="input-wrapper inline">
+                                    <input type="text" id="usernameInput" class="form-control" placeholder="instagram_handle" maxlength="30">
+                                    <small class="text-muted">Without the @ symbol</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Post Media Upload -->
+                        <div class="upload-table-row">
+                            <div class="upload-label-cell">
+                                <label class="upload-label">
+                                    <i class="fas fa-photo-video"></i>
+                                    Post Media
+                                </label>
+                            </div>
+                            <div class="upload-input-cell">
+                                <div class="upload-area" id="mediaUpload" ondrop="handleFileDrop(event, 'media')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                                    <input type="file" id="mediaInput" accept=".mp4,.jpg,.jpeg" style="display: none;" onchange="handleFileSelect(event, 'media')">
+                                    <div class="upload-content">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <span class="upload-text">MP4/JPG</span>
+                                        <small class="text-muted">Max 100MB</small>
+                                    </div>
+                                    <div class="upload-preview" style="display: none;">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        <span id="mediaFileName" class="file-name"></span>
+                                        <button type="button" class="remove-file" onclick="removeFile('media')">×</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 4: Comments CSV Upload -->
+                        <div class="upload-table-row">
+                            <div class="upload-label-cell">
+                                <label class="upload-label">
+                                    <i class="fas fa-comments"></i>
+                                    Comments File
+                                </label>
+                            </div>
+                            <div class="upload-input-cell">
+                                <div class="upload-area" id="commentsUpload" ondrop="handleFileDrop(event, 'comments')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                                    <input type="file" id="commentsInput" accept=".csv" style="display: none;" onchange="handleFileSelect(event, 'comments')">
+                                    <div class="upload-content">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <span class="upload-text">CSV file</span>
+                                        <small class="text-muted">Comments export</small>
+                                    </div>
+                                    <div class="upload-preview" style="display: none;">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        <span id="commentsFileName" class="file-name"></span>
+                                        <button type="button" class="remove-file" onclick="removeFile('comments')">×</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Continue Button -->
+                    <div class="text-center mt-4">
+                        <button id="continueBtn" class="btn btn-primary btn-lg px-5" disabled onclick="loadCustomPost()">
+                            <i class="fas fa-arrow-right"></i>
+                            Load Post Viewer
+                        </button>
+                    </div>
+
+                </div>
+                
+                <!-- Local Archive Setup -->
+                <div id="localArchiveSetup" class="archive-setup" style="display: none;">
+                    <div class="setup-header">
+                        <button id="backToModeSelection" class="btn btn-link p-0 mb-3">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </button>
+                        <h4><i class="bi bi-folder"></i> Select Archive Folder</h4>
+                    </div>
+                    
+                    <div id="directoryApiSupported" class="api-method" style="display: none;">
+                        <div class="method-card text-center">
+                            <p>Select your <strong>mm_instagram_archive</strong> folder to continue.</p>
+                            <button id="selectDirectoryBtn" class="btn btn-primary btn-lg">
+                                <i class="bi bi-folder-plus"></i> Choose Folder
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="directoryApiNotSupported" class="api-method" style="display: none;">
+                        <div class="method-card">
+                            <h5><i class="bi bi-server text-warning"></i> Local Server Required</h5>
+                            <p>Your browser doesn't support direct file access. You'll need to run a local server:</p>
+                            <div class="server-instructions">
+                                <ol>
+                                    <li>Open terminal in your content directory</li>
+                                    <li>Run: <code>python -m http.server 8080</code></li>
+                                    <li>Click "Use Local Server" below</li>
+                                </ol>
+                            </div>
+                            <button id="useLocalServerBtn" class="btn btn-warning btn-lg">
+                                <i class="bi bi-server"></i> Use Local Server (localhost:8080)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="directoryStatus" class="directory-status" style="display: none;">
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i>
+                        <strong>Directory loaded:</strong> <span id="selectedDirectoryName"></span>
+                        <br>
+                        <small><span id="foundFilesCount"></span> content files found</small>
+                    </div>
+                    <button id="continueToAppBtn" class="btn btn-success btn-lg">
+                        <i class="bi bi-play-circle"></i> Continue to App
+                    </button>
+                </div>
+                
+                <div id="directoryError" class="directory-error" style="display: none;">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Error:</strong> <span id="errorMessage"></span>
+                    </div>
+                    <button id="retryDirectoryBtn" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-clockwise"></i> Try Again
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="container-fluid" style="display: none;">
+        
+        <!-- Stats Bar -->
+        <div id="statsBarContainer" class="d-flex justify-content-between align-items-center mb-3" style="display: none !important;">
+            <!-- View Toggle -->
+            <div class="view-toggle">
+                <div class="btn-group" role="group" aria-label="View toggle">
+                    <input type="radio" class="btn-check" name="viewToggle" id="gridViewToggle" checked>
+                    <label class="btn btn-outline-primary" for="gridViewToggle">
+                        <i class="bi bi-grid-3x3-gap me-1"></i>Grid View
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="viewToggle" id="listViewToggle">
+                    <label class="btn btn-outline-primary" for="listViewToggle">
+                        <i class="bi bi-list-ul me-1"></i>List View
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Stats -->
+            <div id="statsBar" class="stats-bar mb-0">
+                <span id="resultCount" class="badge bg-primary">0 posts</span>
+                <span id="totalComments" class="badge bg-secondary">0 comments</span>
+                <button type="button" id="exportAllPostsComments" class="btn btn-success" style="display: none;">
+                    <i class="bi bi-download"></i> Export All Post Comments
+                </button>
+            </div>
+        </div>
+
+        <!-- Post Grid View -->
+        <div id="videoGridView" class="view-container" style="display: none !important;">
+            <div id="videoGrid" class="row g-3">
+                <!-- Posts will be dynamically loaded here -->
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Post pagination" class="mt-4">
+                <ul id="videoPagination" class="pagination justify-content-center">
+                    <!-- Pagination will be generated here -->
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Post List View -->
+        <div id="videoListView" class="view-container" style="display: none !important;">
+            <div class="table-responsive">
+                <table class="table table-hover" id="videoListTable">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th scope="col" class="post-thumbnail-col">Post</th>
+                            <th scope="col" class="post-title-col">Title</th>
+                            <th scope="col" class="text-center sortable-header" data-sort="date">
+                                Date <i class="bi bi-chevron-expand sort-icon"></i>
+                            </th>
+                            <th scope="col" class="text-center sortable-header" data-sort="likes">
+                                Likes <i class="bi bi-chevron-expand sort-icon"></i>
+                            </th>
+                            <th scope="col" class="text-center sortable-header" data-sort="comments">
+                                Comments <i class="bi bi-chevron-expand sort-icon"></i>
+                            </th>
+                            <th scope="col" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="videoListBody">
+                        <!-- Posts will be dynamically loaded here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- List Pagination -->
+            <nav aria-label="Post list pagination" class="mt-4">
+                <ul id="videoListPagination" class="pagination justify-content-center">
+                    <!-- Pagination will be generated here -->
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Post Detail View -->
+        <div id="videoDetailView" class="view-container" style="display: block;">
+            <div class="instagram-post-view">
+                
+                <div class="row">
+                    <!-- Media Column -->
+                    <div class="col-lg-7">
+                        <div class="media-column-content">
+                            <!-- Post Header Above Media -->
+                            <div class="post-meta-header mb-3">
+                                <div class="d-flex align-items-center">
+                                    <!-- Back button removed for single post view -->
+                                    <div class="profile-avatar me-3">
+                                        <img src="jonno-otto-avatar.png" 
+                                             alt="jonno.otto" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover; aspect-ratio: 1/1;">
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold">jonno.otto</div>
+                                        <div class="text-muted small" id="videoDate">Date</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Media Container -->
+                        <div class="instagram-media-container mb-3">
+                            <div class="video-container">
+                                <video id="videoPlayer" class="video-player">
+                                    <p>Your browser doesn't support HTML5 video.</p>
+                                </video>
+                                <div class="instagram-image" id="instagramImage" style="display: none;">
+                                    <!-- Image will be displayed here -->
+                                </div>
+                                <div class="video-play-overlay" id="videoPlayOverlay"></div>
+                                
+                                <!-- Media Navigation Controls (for multiple media) -->
+                                <div class="media-navigation" id="mediaNavigation" style="display: none;">
+                                    <button class="media-nav-btn prev-btn" id="prevMediaBtn">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    <button class="media-nav-btn next-btn" id="nextMediaBtn">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Media Indicators -->
+                                <div class="media-indicators" id="mediaIndicators">
+                                    <!-- Dots will be generated here -->
+                                </div>
+                                
+                                <!-- Media Counter -->
+                                <div class="media-counter" id="mediaCounter" style="display: none;">
+                                    <span id="currentMediaIndex">1</span>/<span id="totalMediaCount">1</span>
+                                </div>
+                                
+                                <!-- Custom Video Controls -->
+                                <div class="custom-video-controls" id="customControls">
+                                    <div class="controls-row">
+                                        <button class="control-btn play-pause" id="playPauseBtn">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        
+                                        <div class="progress-container" id="progressContainer">
+                                            <div class="progress-bar" id="progressBar"></div>
+                                        </div>
+                                        
+                                        <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+                                        
+                                        <div class="volume-container">
+                                            <button class="control-btn" id="muteBtn">
+                                                <i class="fas fa-volume-up"></i>
+                                            </button>
+                                            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100">
+                                        </div>
+                                        
+                                        <button class="control-btn" id="fullscreenBtn">
+                                            <i class="fas fa-expand"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="video-fallback" id="videoFallback" style="display: none;">
+                                    <div class="alert alert-warning">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                        Video file not found. <a href="#" id="openYouTubeLink" target="_blank">Watch on YouTube</a>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+                            
+                            <!-- Post Navigation Arrows -->
+                        </div>
+                        
+                    </div>
+                    
+                    <!-- Comments Sidebar -->
+                    <div class="col-lg-5">
+                        <div class="instagram-comments-sidebar">
+                            <!-- Single Scrollable Container for all content -->
+                            <div class="comments-scroll-container">
+                                
+                                <!-- Post Analytics Toggle -->
+                                <div class="p-3 border-bottom">
+                                    <button id="postAnalyticsToggle" class="btn btn-purple w-100" data-expanded="false">
+                                        <i class="bi bi-graph-up me-2"></i>Post analytics
+                                        <span class="ms-2 text-white-50">(<span id="videoViews">0</span> likes)</span>
+                                        <i class="bi bi-chevron-down ms-auto toggle-icon"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Analytics Panel -->
+                                <div id="analyticsPanel" class="analytics-panel" style="display: none;">
+                                    <!-- Analytics Tabs -->
+                                    <div class="analytics-tabs">
+                                        <button class="analytics-tab active" data-tab="frequent">
+                                            <i class="bi bi-cloud"></i> Frequent
+                                        </button>
+                                        <button class="analytics-tab" data-tab="themes">
+                                            <i class="bi bi-emoji-smile"></i> Sentiment
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Tab Content -->
+                                    <div class="tab-content">
+                                        <!-- Frequent Words Tab -->
+                                        <div id="frequentTab" class="tab-pane active">
+                                            <div class="tab-header">
+                                                <h6>Most Frequent Words</h6>
+                                                <small class="text-muted">Top words mentioned in comments</small>
+                                            </div>
+                                            <div id="analyticsWordCloud" class="analytics-word-cloud"></div>
+                                        </div>
+                                        
+                                        <!-- Themes Tab (renamed to Sentiment) -->
+                                        <div id="themesTab" class="tab-pane">
+                                            <div class="tab-header">
+                                                <h6>Comment Sentiment</h6>
+                                                <small class="text-muted">Common emotional themes and reactions</small>
+                                            </div>
+                                            <div id="themesAnalysis" class="themes-analysis"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Caption as first comment -->
+                                <div class="caption-comment p-3 border-bottom" id="captionComment">
+                                    <div class="d-flex align-items-start">
+                                        <div class="profile-avatar me-3 flex-shrink-0">
+                                            <img src="jonno-otto-avatar.png" 
+                                                 alt="jonno.otto" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="comment-text">
+                                                <span class="fw-bold me-1">jonno.otto</span>
+                                                <span id="videoDescription"></span>
+                                            </div>
+                                            <div class="comment-time text-muted small mt-1" id="captionTime">2h</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Comments Section -->
+                                <div class="comments-content p-3">
+                                    <!-- Comments Header -->
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h5 id="commentsTitle">Comments</h5>
+                                        <button type="button" id="exportSinglePostComments" class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-download"></i> Export All
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Comment Filters -->
+                                    <div class="comment-filters mb-3">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                            <input type="text" id="commentSearch" class="form-control" placeholder="Search comments...">
+                                        </div>
+                                        <div class="mt-2">
+                                            <select id="commentSort" class="form-select form-select-sm">
+                                                <option value="newest" selected>Newest</option>
+                                                <option value="relevance">Most Relevant</option>
+                                                <option value="oldest">Oldest</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Popular Words -->
+                                    <div class="mb-3">
+                                        <h6 class="mb-2" style="font-size: 14px; color: #8e8e8e; font-weight: 600;">Popular</h6>
+                                        <div class="mini-word-cloud" id="miniWordCloud">
+                                            <!-- Mini word cloud will be populated here -->
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Comments List -->
+                                    <div id="commentsList" class="comments-list">
+                                        <!-- Comments will be loaded here -->
+                                    </div>
+                            
+                            <!-- Load More Comments -->
+                            <div class="text-center mt-3">
+                                <button type="button" id="loadMoreComments" class="btn btn-outline-primary btn-sm" style="display: none;">
+                                    Load More Comments
+                                </button>
+                            </div>
+                            
+                            <!-- Add Comment Section -->
+                            <div class="add-comment-section mt-3 pt-3" style="border-top: 1px solid #efefef;">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        <i class="far fa-smile" style="font-size: 1.2rem; color: #8e8e8e;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <input type="text" class="form-control border-0" placeholder="Add a comment..." readonly style="background: transparent; font-size: 14px;">
+                                    </div>
+                                    <div class="ms-2">
+                                        <button class="btn btn-link p-0 text-primary" style="font-size: 14px; font-weight: 600;" disabled>Post</button>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden Metadata Sidebar -->
+                <div class="col-lg-12 mt-4" style="display: none;">
+                    <!-- Comment Insights -->
+                    <div id="commentInsights" class="comment-insights mb-4" style="display: none;">
+                        <div class="insights-tabs mb-3">
+                            <button class="btn btn-sm btn-outline-secondary active" data-tab="wordcloud">
+                                <i class="bi bi-cloud"></i> Word Cloud
+                            </button>
+                        </div>
+                        
+                        <div class="insights-content">
+                            <div id="wordCloudTab" class="insight-tab active">
+                                <h6 class="text-muted mb-2">Most Frequent Words</h6>
+                                <div id="wordCloud" class="word-cloud"></div>
+                            </div>
+                            
+                            <div id="likedWordsTab" class="insight-tab" style="display: none;">
+                                <h6 class="text-muted mb-2">Most Common Words...</h6>
+                                <div id="likedWords" class="liked-words"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Description -->
+                    <div class="video-description-sidebar mb-4">
+                        <button class="btn btn-outline-secondary btn-sm mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#descriptionCollapse" aria-expanded="true" aria-controls="descriptionCollapse">
+                            <i class="bi bi-chevron-down"></i> Description
+                        </button>
+                        <div class="collapse show" id="descriptionCollapse">
+                            <div class="card card-body">
+                                <p id="videoDescription">Video description...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Progress Modal -->
+    <div class="export-progress" id="exportProgress" style="display: none;">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h6 class="mb-0" id="exportProgressTitle">Exporting Comments</h6>
+            <button type="button" class="btn-close close-progress" aria-label="Close"></button>
+        </div>
+        
+        <!-- Current Video Progress (for multi-video export) -->
+        <div id="currentVideoProgress" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <small class="text-muted">Current Video:</small>
+                <small class="text-muted" id="currentVideoStats">0/0 comments</small>
+            </div>
+            <div class="progress mb-2" style="height: 6px;">
+                <div id="currentVideoProgressBar" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <!-- Overall Progress -->
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <small class="text-muted" id="overallProgressLabel">Overall:</small>
+            <small class="text-muted" id="overallProgressStats">0/0</small>
+        </div>
+        <div class="progress mb-2" style="height: 8px;">
+            <div id="exportProgressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+        </div>
+        <div id="exportProgressText" class="progress-text">Starting export...</div>
+    </div>
+
+    <!-- About Modal -->
+    <div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aboutModalLabel">Instagram Archive Explorer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-1">© 2025 Darien Bathalter</p>
+                    <p class="mb-1">For bespoke data visualization tools...</p>
+                    <p class="mb-3"><a href="https://quiettools.dev/" target="_blank">https://quiettools.dev/</a></p>
+                    
+                    <h6>Contact information:</h6>
+                    <p class="mb-1">Email: <a href="mailto:hello@quiettools.dev">hello@quiettools.dev</a></p>
+                    <p class="mb-3">Text / Voicemail: <a href="tel:+19045726183">(904) 572-6183</a></p>
+                    
+                    <p class="mb-0"><em>Made with Ode 🌿</em></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Function to go to welcome screen bypassing login
+        function goToWelcomeScreen(event) {
+            event.preventDefault();
+            // Store a flag to bypass login screen
+            sessionStorage.setItem('bypassLogin', 'true');
+            // Navigate to root
+            window.location.href = '../../../index.html';
+        }
+
+        // Function to go to main view when logo/title is clicked
+        function goToMainView() {
+            if (window.app && window.app.currentView === 'post-detail') {
+                window.app.showPostGrid();
+            }
+            // If already on main view, scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Cookie helper functions
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for(let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        function removeLoginCookie() {
+            document.cookie = 'mmarchive_logged_in=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+        }
+
+        // Global logout function
+        function logoutUser() {
+            removeLoginCookie();
+            sessionStorage.clear();
+            // Show login modal instead of reloading
+            const passwordModal = document.getElementById('passwordModal');
+            const navbar = document.querySelector('.titlebar');
+            const app = document.getElementById('app');
+            
+            if (passwordModal) passwordModal.style.display = 'flex';
+            if (navbar) navbar.style.display = 'none';
+            if (app) app.style.display = 'none';
+            
+            // Reset password input
+            const passwordInput = document.getElementById('passwordInput');
+            if (passwordInput) passwordInput.value = '';
+        }
+
+        // App drawer functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const drawerToggle = document.getElementById('drawerToggle');
+            const appDrawer = document.getElementById('appDrawer');
+            
+            if (drawerToggle && appDrawer) {
+                drawerToggle.addEventListener('click', function() {
+                    const isOpen = appDrawer.classList.contains('open');
+                    if (isOpen) {
+                        appDrawer.classList.remove('open');
+                        document.body.classList.remove('drawer-open');
+                        drawerToggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                    } else {
+                        appDrawer.classList.add('open');
+                        document.body.classList.add('drawer-open');
+                        drawerToggle.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                    }
+                });
+            }
+
+            // Add sessionStorage flag for app drawer navigation links
+            const drawerLinks = document.querySelectorAll('.app-drawer-icon[href]');
+            drawerLinks.forEach(link => {
+                if (link.getAttribute('href') !== '#') {
+                    link.addEventListener('click', function(e) {
+                        sessionStorage.setItem('bypassLogin', 'true');
+                    });
+                }
+            });
+        });
+    </script>
+    
+    <!-- App Scripts -->
+    <script src="js/upload-manager.js"></script>
+    <script src="js/directory-manager.js"></script>
+    <script src="js/comment-database-loader.js"></script>
+    <script src="js/archive-directory-manager.js"></script>
+    <script src="js/mode-manager.js"></script>
+    <script src="js/data-manager.js"></script>
+    <script src="js/video-player.js"></script>
+    <script src="js/avatar-service.js"></script>
+    <script src="js/export-service.js"></script>
+    <script src="js/network-animation.js"></script>
+    <script src="js/components/video-grid.js"></script>
+    <script src="js/components/comment-list.js"></script>
+    <script src="js/app.js"></script>
+    
+    <!-- Post Analytics Modal -->
+    <div class="modal fade" id="postAnalyticsModal" tabindex="-1" aria-labelledby="postAnalyticsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="postAnalyticsModalLabel">Post Analytics</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Comment Analysis Summary -->
+                    <div class="analytics-section mb-4">
+                        <h6 class="fw-bold mb-3">Comment Analysis Summary</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="sentiment-breakdown">
+                                    <h6 class="text-muted">Sentiment Breakdown</h6>
+                                    <div class="sentiment-bars">
+                                        <div class="sentiment-item mb-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>Excited</span>
+                                                <span class="text-success">30%</span>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-success" style="width: 30%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="sentiment-item mb-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>Neutral</span>
+                                                <span>40%</span>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-secondary" style="width: 40%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="sentiment-item mb-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>Confused</span>
+                                                <span class="text-warning">10%</span>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-warning" style="width: 10%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="sentiment-item mb-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>Frustrated</span>
+                                                <span class="text-danger">20%</span>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-danger" style="width: 20%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="top-themes">
+                                    <h6 class="text-muted">Top Themes</h6>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2"><span class="badge bg-primary me-2">2</span> frequently asked questions</li>
+                                        <li class="mb-2"><span class="badge bg-danger me-2">1</span> high-priority pain points</li>
+                                        <li class="mb-2"><span class="badge bg-info me-2">1</span> content requests</li>
+                                        <li class="mb-2"><span class="badge bg-secondary me-2">2</span> topics of interest</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Word Clouds -->
+                    <div class="analytics-section mb-4">
+                        <h6 class="fw-bold mb-3">Word Analysis</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Most Common Words</h6>
+                                <div id="modalWordCloud" class="modal-word-cloud p-3 border rounded"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Most Common Words</h6>
+                                <div id="modalLikedWords" class="modal-liked-words p-3 border rounded"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Frequently Asked Questions -->
+                    <div class="analytics-section mb-4">
+                        <h6 class="fw-bold mb-3">Frequently Asked Questions</h6>
+                        <div id="frequentQuestions" class="faq-section">
+                            <!-- Questions will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Pain Points & Issues -->
+                    <div class="analytics-section mb-4">
+                        <h6 class="fw-bold mb-3">Pain Points & Issues</h6>
+                        <div id="painPoints" class="pain-points-section">
+                            <!-- Pain points will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Content Requests -->
+                    <div class="analytics-section mb-4">
+                        <h6 class="fw-bold mb-3">Content Requests</h6>
+                        <div id="contentRequests" class="content-requests-section">
+                            <!-- Content requests will be populated here -->
+                        </div>
+                    </div>
+                    
+                    
+                    <!-- Recommended Video Ideas -->
+                    <div class="analytics-section">
+                        <h6 class="fw-bold mb-3">Recommended Video Ideas</h6>
+                        <div id="videoIdeas" class="video-ideas-section">
+                            <!-- Video ideas will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

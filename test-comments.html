@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Comment Loading</title>
+</head>
+<body>
+    <h1>Testing Comment Loading</h1>
+    <div id="output"></div>
+    
+    <script>
+        async function testLoad() {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Testing...';
+            
+            try {
+                console.log('Testing fetch...');
+                const response = await fetch('DEFmqyBuiCA_comments.json');
+                console.log('Response:', response.status, response.statusText);
+                
+                if (response.ok) {
+                    const comments = await response.json();
+                    console.log('Loaded comments:', comments.length);
+                    output.innerHTML = `✅ Successfully loaded ${comments.length} comments`;
+                } else {
+                    output.innerHTML = `❌ Fetch failed: ${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                output.innerHTML = `❌ Error: ${error.message}`;
+            }
+        }
+        
+        testLoad();
+    </script>
+</body>
+</html>

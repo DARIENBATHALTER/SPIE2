@@ -1,0 +1,9 @@
+{
+  "name": "mmarchiveexplorer",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Medical Medium Instagram Archive Explorer",
+  "scripts": {
+    "process-data": "node process-instagram-data.js"
+  }
+}

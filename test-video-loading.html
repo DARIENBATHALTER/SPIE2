@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Loading Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        video {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>Video Loading Test</h1>
+    <p>This page tests the video loading functionality after our fix.</p>
+
+    <div class="test-section">
+        <h2>Test 1: Direct Video Element Loading</h2>
+        <div id="status1" class="status info">Testing...</div>
+        <video id="testVideo1" controls poster="https://img.youtube.com/vi/CfVO2tD4_0U/maxresdefault.jpg">
+            <p>Your browser doesn't support HTML5 video.</p>
+        </video>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Fetch HEAD Request (Previous Method)</h2>
+        <div id="status2" class="status info">Testing...</div>
+        <button onclick="testHeadRequest()">Test HEAD Request</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Video Player Class (New Method)</h2>
+        <div id="status3" class="status info">Testing...</div>
+        <video id="testVideo3" controls>
+            <p>Your browser doesn't support HTML5 video.</p>
+        </video>
+        <button onclick="testVideoPlayer()">Test Video Player</button>
+    </div>
+
+    <script src="js/video-player.js"></script>
+    <script>
+        // Test 1: Direct video loading
+        const video1 = document.getElementById('testVideo1');
+        const status1 = document.getElementById('status1');
+        const testPath = 'YouTube_Downloads/20250530_CfVO2tD4_0U_100_Chemtrails_Entering_The_Paranormal_Triangles.mp4';
+
+        video1.src = testPath;
+        
+        video1.addEventListener('loadstart', () => {
+            status1.textContent = 'Loading started...';
+            status1.className = 'status info';
+        });
+
+        video1.addEventListener('canplay', () => {
+            status1.textContent = '✅ SUCCESS: Video loaded and can play!';
+            status1.className = 'status success';
+        });
+
+        video1.addEventListener('error', (e) => {
+            status1.textContent = `❌ ERROR: ${e.type} - ${e.message || 'Video failed to load'}`;
+            status1.className = 'status error';
+        });
+
+        // Test 2: HEAD request (old method)
+        async function testHeadRequest() {
+            const status2 = document.getElementById('status2');
+            status2.textContent = 'Testing HEAD request...';
+            status2.className = 'status info';
+
+            try {
+                const response = await fetch(testPath, { method: 'HEAD' });
+                if (response.ok) {
+                    status2.textContent = '✅ SUCCESS: HEAD request worked';
+                    status2.className = 'status success';
+                } else {
+                    status2.textContent = `❌ FAILED: HEAD request returned ${response.status}`;
+                    status2.className = 'status error';
+                }
+            } catch (error) {
+                status2.textContent = `❌ ERROR: HEAD request failed - ${error.message}`;
+                status2.className = 'status error';
+            }
+        }
+
+        // Test 3: VideoPlayer class
+        function testVideoPlayer() {
+            const video3 = document.getElementById('testVideo3');
+            const status3 = document.getElementById('status3');
+            const fallback3 = document.createElement('div');
+            fallback3.innerHTML = '<div class="alert">Fallback message</div>';
+            fallback3.style.display = 'none';
+            video3.parentNode.appendChild(fallback3);
+
+            const player = new VideoPlayer(video3, fallback3);
+            
+            status3.textContent = 'Testing VideoPlayer class...';
+            status3.className = 'status info';
+
+            // Mock data manager
+            const mockDataManager = {
+                getVideoFilePath: () => testPath,
+                getYouTubeUrl: () => 'https://youtube.com/watch?v=CfVO2tD4_0U'
+            };
+
+            const mockVideoData = {
+                video_id: 'CfVO2tD4_0U',
+                title: 'Test Video'
+            };
+
+            player.loadVideo(mockVideoData, mockDataManager)
+                .then(() => {
+                    status3.textContent = '✅ SUCCESS: VideoPlayer loaded video!';
+                    status3.className = 'status success';
+                })
+                .catch((error) => {
+                    status3.textContent = `❌ ERROR: VideoPlayer failed - ${error.message}`;
+                    status3.className = 'status error';
+                });
+        }
+    </script>
+</body>
+</html> 

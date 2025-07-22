@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Mapping Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        pre { font-size: 12px; background-color: #f8f9fa; padding: 10px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>Video Mapping Debug</h1>
+    <p>Testing video mapping functionality to identify path generation issues.</p>
+
+    <div id="results"></div>
+    <button onclick="runTests()">Run Debug Tests</button>
+
+    <script src="js/data-manager.js"></script>
+    <script>
+        async function runTests() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="test-result info">Running tests...</div>';
+            
+            try {
+                // Create data manager instance
+                const dataManager = new DataManager();
+                
+                // Load video mapping only
+                await dataManager.loadVideoMapping();
+                
+                // Test specific problematic videos
+                const testVideos = [
+                    'TufH7JAmO9M', // Healing Thyme Tea
+                    'SNTn7C8D6JY', // Extraterrestrials Watching The Chemtrails
+                    'CfVO2tD4_0U'  // Working video
+                ];
+                
+                let results = '<h2>Test Results</h2>';
+                
+                for (const videoId of testVideos) {
+                    const mapping = dataManager.videoMapping[videoId];
+                    const filePath = dataManager.getVideoFilePath(videoId);
+                    
+                    results += `
+                        <div class="test-result ${mapping ? 'success' : 'error'}">
+                            <h3>Video ID: ${videoId}</h3>
+                            <p><strong>Has Mapping:</strong> ${mapping ? 'Yes' : 'No'}</p>
+                            ${mapping ? `
+                                <p><strong>Title:</strong> ${mapping.title}</p>
+                                <p><strong>Actual Filename:</strong> ${mapping.actual_filename}</p>
+                                <p><strong>File Path:</strong> ${mapping.file_path}</p>
+                            ` : ''}
+                            <p><strong>getVideoFilePath() returns:</strong> ${filePath || 'null'}</p>
+                            ${filePath ? `<p><a href="${filePath}" target="_blank">Test Direct Link</a></p>` : ''}
+                        </div>
+                    `;
+                }
+                
+                // Show raw mapping data
+                results += `
+                    <div class="test-result info">
+                        <h3>Raw Video Mapping Object</h3>
+                        <p>Total mappings: ${Object.keys(dataManager.videoMapping).length}</p>
+                        <pre>${JSON.stringify(dataManager.videoMapping, null, 2).substring(0, 2000)}...</pre>
+                    </div>
+                `;
+                
+                resultsDiv.innerHTML = results;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="test-result error">
+                        <h3>Error</h3>
+                        <p>${error.message}</p>
+                        <pre>${error.stack}</pre>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Loading Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .success { color: green; }
+        .error { color: red; }
+        .test-image { max-width: 200px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Instagram Archive Media Loading Test</h1>
+    
+    <div class="test-section">
+        <h2>JSON Data Loading Test</h2>
+        <div id="json-test-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Media File Loading Test</h2>
+        <div id="media-test-results"></div>
+    </div>
+    
+    <script>
+        async function testJSONLoading() {
+            const results = document.getElementById('json-test-results');
+            
+            try {
+                // Test Instagram posts JSON
+                const postsResponse = await fetch('data/instagram-posts.json');
+                if (postsResponse.ok) {
+                    const posts = await postsResponse.json();
+                    results.innerHTML += `<p class="success">✅ Instagram posts loaded: ${posts.length} posts</p>`;
+                    
+                    // Test media mapping JSON
+                    const mappingResponse = await fetch('data/instagram-media-mapping.json');
+                    if (mappingResponse.ok) {
+                        const mapping = await mappingResponse.json();
+                        const mappingKeys = Object.keys(mapping);
+                        results.innerHTML += `<p class="success">✅ Media mapping loaded: ${mappingKeys.length} entries</p>`;
+                        
+                        // Test first few media files
+                        await testMediaFiles(posts, mapping);
+                    } else {
+                        results.innerHTML += `<p class="error">❌ Failed to load media mapping</p>`;
+                    }
+                } else {
+                    results.innerHTML += `<p class="error">❌ Failed to load Instagram posts</p>`;
+                }
+            } catch (error) {
+                results.innerHTML += `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function testMediaFiles(posts, mapping) {
+            const mediaResults = document.getElementById('media-test-results');
+            
+            // Test first 5 posts
+            for (let i = 0; i < Math.min(5, posts.length); i++) {
+                const post = posts[i];
+                mediaResults.innerHTML += `<h3>Testing Post: ${post.video_id}</h3>`;
+                
+                if (post.media_files && post.media_files.length > 0) {
+                    for (const media of post.media_files) {
+                        const mediaPath = `instadata/posts/${media.filename}`;
+                        
+                        try {
+                            const response = await fetch(mediaPath, { method: 'HEAD' });
+                            if (response.ok) {
+                                mediaResults.innerHTML += `<p class="success">✅ ${media.type}: ${media.filename}</p>`;
+                                
+                                // If it's an image, try to display it
+                                if (media.type === 'image') {
+                                    const img = document.createElement('img');
+                                    img.src = mediaPath;
+                                    img.className = 'test-image';
+                                    img.alt = media.filename;
+                                    img.onerror = () => {
+                                        mediaResults.innerHTML += `<p class="error">❌ Failed to display image: ${media.filename}</p>`;
+                                    };
+                                    mediaResults.appendChild(img);
+                                }
+                            } else {
+                                mediaResults.innerHTML += `<p class="error">❌ ${media.type}: ${media.filename} (${response.status})</p>`;
+                            }
+                        } catch (error) {
+                            mediaResults.innerHTML += `<p class="error">❌ Error loading ${media.filename}: ${error.message}</p>`;
+                        }
+                    }
+                } else {
+                    mediaResults.innerHTML += `<p>No media files found for this post</p>`;
+                }
+                
+                mediaResults.innerHTML += '<hr>';
+            }
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('load', testJSONLoading);
+    </script>
+</body>
+</html>

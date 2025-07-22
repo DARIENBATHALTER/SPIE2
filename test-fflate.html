@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>fflate Test</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "fflate": "https://unpkg.com/fflate@0.8.2/esm/browser.js"
+        }
+    }
+    </script>
+</head>
+<body>
+    <h1>Testing fflate Library</h1>
+    <button id="testBtn">Test fflate ZIP Creation</button>
+    <div id="result"></div>
+
+    <script type="module">
+        import * as fflate from 'fflate';
+        
+        document.getElementById('testBtn').addEventListener('click', () => {
+            const result = document.getElementById('result');
+            
+            try {
+                // Test creating a simple ZIP
+                const files = {
+                    'test.txt': new TextEncoder().encode('Hello fflate!')
+                };
+                
+                fflate.zip(files, { level: 1 }, (err, data) => {
+                    if (err) {
+                        result.innerHTML = `<p style="color: red;">❌ Error: ${err}</p>`;
+                        return;
+                    }
+                    
+                    result.innerHTML = `<p style="color: green;">✅ fflate working! ZIP size: ${data.length} bytes</p>`;
+                    
+                    // Test download
+                    const blob = new Blob([data], { type: 'application/zip' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'test.zip';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+                
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">❌ Import Error: ${error}</p>`;
+            }
+        });
+        
+        console.log('✅ fflate module loaded successfully:', fflate);
+    </script>
+</body>
+</html> 
